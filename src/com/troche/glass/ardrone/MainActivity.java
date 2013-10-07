@@ -116,6 +116,7 @@ public class MainActivity extends Activity implements
 
     @Override
     public synchronized void onPause() {
+        speak(R.string.voice_bye);
         super.onPause();
         stopSensorTracking();
         if(D) Log.e(TAG, "- ON PAUSE -");
@@ -127,7 +128,6 @@ public class MainActivity extends Activity implements
 
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         ardrone.land();
-        speak(R.string.voice_bye);
         mSpeech.shutdown();
 
         if(D) Log.e(TAG, "--- ON DESTROY ---");

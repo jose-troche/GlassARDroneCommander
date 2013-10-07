@@ -57,7 +57,6 @@ public class Ardrone {
     }
 
     public void takeoff(){
-        //flatTrim();
         atRef(true);
     }
 
@@ -89,10 +88,10 @@ public class Ardrone {
             }
         }
 
-        move(droneRoll, dronePitch, droneVerticalSpeed, droneYaw);
+        atPcmd(droneRoll, dronePitch, droneVerticalSpeed, droneYaw);
     }
 
-    private void move(float roll, float pitch, float verticalSpeed, float yaw){
+    private void atPcmd(float roll, float pitch, float verticalSpeed, float yaw){
         if (roll==0f && pitch==0f && verticalSpeed==0f && yaw==0f){
             hover();
         }
