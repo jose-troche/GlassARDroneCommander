@@ -4,14 +4,12 @@
     <string name="app_name">ARDrone Commander</string>
 
     <!--  MainActivity -->
-    <string name="not_connected">You are not connected to a device</string>
-    <string name="bt_not_enabled_leaving">Bluetooth was not enabled. Leaving...</string>
-    <string name="title_connecting">connecting...</string>
-    <string name="title_connected_to">connected to <xliff:g id="device_name">%1$s</xliff:g></string>
-    <string name="title_not_connected">not connected</string>
+    <string name="title_connected_to">Connected to <xliff:g id="wifi">%1$s</xliff:g></string>
+    <string name="title_not_connected">Not connected</string>
 
     <!-- Options Menu -->
-    <string name="insecure_connect">Connect</string>
+    <string name="reset_emergency">Reset</string>
+    <string name="flat_trim">Flat Trim</string>
 
     <!-- Voice commands -->
     <string name="voice_takeoff">Taking off</string>

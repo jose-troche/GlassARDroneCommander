@@ -23,6 +23,8 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
@@ -41,7 +43,7 @@ public class MainActivity extends Activity implements
         SensorEventListener, TextToSpeech.OnInitListener {
 
     // Debugging
-    private static final String TAG = "ARDroneCommander";
+    private static final String TAG = "ARDroneCommanderMainActivity";
     private static final boolean D = true;
 
     // ARDrone object
@@ -57,21 +59,12 @@ public class MainActivity extends Activity implements
     // Text to Speech
     private TextToSpeech mSpeech;
 
-    // Sensor constants
-    private static final int HEADING_THRESHOLD_POS = 15;
-    private static final int HEADING_THRESHOLD_NEG = -15;
-    private static final int PITCH_THRESHOLD_POS = 15;
-    private static final int PITCH_THRESHOLD_NEG = -15;
-    private static final int ROLL_THRESHOLD_POS = 15;
-    private static final int ROLL_THRESHOLD_NEG = -15;
-
     // Layout Views
     private TextView mTextSensorData;
     private TextView mTextOutput;
     private TextView mTextInput;
     private ToggleButton mTakeoffToggle;
     private ToggleButton mElevationToggle;
-
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -103,6 +96,9 @@ public class MainActivity extends Activity implements
         mTextSensorData = (TextView) findViewById(R.id.text_sensor_data);
         mTextOutput = (TextView) findViewById(R.id.text_output);
         mTextInput = (TextView) findViewById(R.id.text_input);
+
+        // Show WiFi info
+        showWifiSSID();
     }
 
     @Override
@@ -130,18 +126,11 @@ public class MainActivity extends Activity implements
         super.onDestroy();
 
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        setCommandText("Quit\n");
+        ardrone.land();
         speak(R.string.voice_bye);
         mSpeech.shutdown();
 
         if(D) Log.e(TAG, "--- ON DESTROY ---");
-    }
-
-    private void setStatus(int resId) {
-        final ActionBar actionBar = getActionBar();
-        if (actionBar != null) {
-            actionBar.setSubtitle(resId);
-        }
     }
 
     private void setStatus(CharSequence subTitle) {
@@ -160,6 +149,8 @@ public class MainActivity extends Activity implements
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
+        // Hide items if Ardrone took off
+        if (mTakeoffToggle.isChecked()) return false;
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.option_menu, menu);
         return true;
@@ -169,11 +160,29 @@ public class MainActivity extends Activity implements
     public boolean onOptionsItemSelected(MenuItem item) {
         Intent serverIntent;
         switch (item.getItemId()) {
-            case R.id.insecure_connect_scan:
-                //startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE_INSECURE);
+            case R.id.reset_emergency:
+                ardrone.reset();
+                return true;
+            case R.id.flat_trim:
+                ardrone.flatTrim();
                 return true;
         }
         return false;
+    }
+
+    /**
+     * Displays the Wifi SSID info in status bar
+     */
+    private void showWifiSSID(){
+        WifiManager wifiManager = (WifiManager) getSystemService(WIFI_SERVICE);
+        WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+        String ssid = wifiInfo.getSSID();
+        if (ssid != null){
+            setStatus(getString(R.string.title_connected_to, ssid));
+        }
+        else {
+            setStatus(getString(R.string.title_not_connected));
+        }
     }
 
     /**
@@ -196,6 +205,8 @@ public class MainActivity extends Activity implements
             ardrone.land();
             speak(R.string.voice_land);
         }
+
+        invalidateOptionsMenu();
     }
 
     public void onElevationToggleClicked(View view) {
@@ -235,7 +246,6 @@ public class MainActivity extends Activity implements
 
         String sensorData;
         float heading, pitch, roll;
-        boolean commandSent = true;
 
         SensorManager.getRotationMatrixFromVector(mRotationMatrix, event.values);
         SensorManager.remapCoordinateSystem(mRotationMatrix,
@@ -254,43 +264,7 @@ public class MainActivity extends Activity implements
 
         mTextSensorData.setText(sensorData);
 
-        if (triggerCommand(pitch, PITCH_THRESHOLD_POS)){
-            if (mElevationToggle.isChecked()){
-                setCommandText("Up");
-            }
-            else {
-                setCommandText("Backward");
-            }
-        }
-        else if (triggerCommand(pitch, PITCH_THRESHOLD_NEG)){
-            if (mElevationToggle.isChecked()){
-                setCommandText("Down");
-            }
-            else {
-                setCommandText("Forward");
-            }
-        }
-        else{
-            commandSent = false;
-        }
-
-        if (triggerCommand(roll, ROLL_THRESHOLD_POS)){
-            setCommandText("Right");
-        }
-        else if (triggerCommand(roll, ROLL_THRESHOLD_NEG)){
-            setCommandText("Left");
-        }
-        else if (!commandSent){
-            setCommandText("None");
-            ardrone.hover();
-        }
-    }
-
-    /**
-     * Determines if a command should be triggered depending on the sensor values
-     **/
-    private boolean triggerCommand(float value, int threshold){
-        return threshold > 0 ? value > threshold : value < threshold;
+        ardrone.move(roll, pitch, heading, mElevationToggle.isChecked());
     }
 
     /**

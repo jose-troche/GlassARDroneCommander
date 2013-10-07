@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Copyright (C) 2009 The Android Open Source Project
+<!-- Created by Jose Troche on 10/5/13.
 
      Licensed under the Apache License, Version 2.0 (the "License");
      you may not use this file except in compliance with the License.
@@ -14,8 +14,12 @@
      limitations under the License.
 -->
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:id="@+id/insecure_connect_scan"
-          android:icon="@android:drawable/ic_menu_search"
-          android:title="@string/insecure_connect"
+    <item android:id="@+id/flat_trim"
+          android:icon="@android:drawable/ic_menu_compass"
+          android:title="@string/flat_trim"
+          android:showAsAction="ifRoom|withText" />
+    <item android:id="@+id/reset_emergency"
+          android:icon="@android:drawable/ic_menu_revert"
+          android:title="@string/reset_emergency"
           android:showAsAction="ifRoom|withText" />
 </menu>

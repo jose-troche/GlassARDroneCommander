@@ -32,7 +32,9 @@ import java.net.InetAddress;
  * String message - the payload of the packet
  */
 public class UdpPacketSenderTask extends AsyncTask<Object, Void, Void> {
+    // Debugging
     private static final String TAG = "UdpPacketSenderTask";
+    private static final boolean D = false;
 
     @Override
     protected Void doInBackground(Object... params) {
@@ -50,6 +52,7 @@ public class UdpPacketSenderTask extends AsyncTask<Object, Void, Void> {
             packet = new DatagramPacket(
                     messageBytes, messageBytes.length, inetAddress, port);
             socket.send(packet);
+            if(D) Log.e(TAG, "On port "+port+" sent "+message);
         } catch (IOException e) {
             Log.e(TAG, "Failed sending UDP packet", e);
         } finally {
