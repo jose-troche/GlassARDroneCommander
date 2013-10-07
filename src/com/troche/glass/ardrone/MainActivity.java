@@ -122,11 +122,10 @@ public class MainActivity extends Activity implements
 
     @Override
     public void onDestroy() {
-        super.onDestroy();
-
-        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         ardrone.land();
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         mSpeech.shutdown();
+        super.onDestroy();
 
         if(D) Log.e(TAG, "--- ON DESTROY ---");
     }
