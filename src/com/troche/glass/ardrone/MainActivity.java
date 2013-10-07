@@ -96,9 +96,6 @@ public class MainActivity extends Activity implements
         mTextSensorData = (TextView) findViewById(R.id.text_sensor_data);
         mTextOutput = (TextView) findViewById(R.id.text_output);
         mTextInput = (TextView) findViewById(R.id.text_input);
-
-        // Show WiFi info
-        showWifiSSID();
     }
 
     @Override
@@ -112,6 +109,7 @@ public class MainActivity extends Activity implements
         super.onResume();
         if(D) Log.e(TAG, "+ ON RESUME +");
         startSensorTracking();
+        showWifiSSID();
     }
 
     @Override
@@ -137,13 +135,6 @@ public class MainActivity extends Activity implements
         final ActionBar actionBar = getActionBar();
         if (actionBar != null) {
             actionBar.setSubtitle(subTitle);
-        }
-    }
-
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if(D) Log.d(TAG, "onActivityResult " + resultCode);
-        switch (requestCode) {
-
         }
     }
 
