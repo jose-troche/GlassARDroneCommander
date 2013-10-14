@@ -255,6 +255,10 @@ public class MainActivity extends Activity implements
         mTextSensorData.setText(sensorData);
 
         ardrone.move(roll, pitch, heading, mElevationToggle.isChecked());
+
+        mTextInput.setText("Flash Drive? " + ardrone.navdata.isFlashDriveReady() +
+                ". Battery: " + ardrone.navdata.batteryPercentage + "%" +
+                ". Receiving Data? " + ardrone.navdata.isReceivingData);
     }
 
     /**
