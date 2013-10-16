@@ -31,16 +31,16 @@ public class Navdata {
     public short flyState;
     public short controlState;
     public int batteryPercentage;
-    public float theta;  // Pitch in milli-degrees
-    public float phi;    // Roll in milli-degrees
-    public float psi;    // Yaw in milli-degrees
+    public float pitch;  // Pitch in milli-degrees
+    public float roll;    // Roll in milli-degrees
+    public float yaw;    // Yaw in milli-degrees
     public int altitude; // cm
     public int velocityX;
     public int velocityY;
     public int velocityZ;
 
     public Navdata(){
-        startNavdataReader();
+        //startNavdataReader();
     }
 
     public void startNavdataReader(){
@@ -101,6 +101,6 @@ public class Navdata {
         ADC_WATCHDOG9, /* ADC Watchdog : (1) delay in uart2 dsr (> 5ms), (0) uart2 is good */
         COM_WATCHDOG, /* Communication Watchdog : (1) com problem, (0) Com is ok */
         EMERGENCY /* Emergency landing : (0) no emergency, (1) emergency */
-    };
+    }
 
 }

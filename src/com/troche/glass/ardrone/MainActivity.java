@@ -18,7 +18,6 @@ package com.troche.glass.ardrone;
 
 import android.app.ActionBar;
 import android.app.Activity;
-import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -51,10 +50,16 @@ public class MainActivity extends Activity implements
 
     // Sensor data
     private SensorManager mSensorManager;
-    private Sensor mSensor;
-    private Float mInitialHeading;
+    private Sensor mSensorRotation;
+    private Sensor mSensorGyroscope;
+    private Float mInitialHeading = null;
+    private int mHeadingCount = 0;
     private float[] mRotationMatrix;
     private float[] mOrientation;
+    private float mHeading = 0;
+    private float mPitch = 0;
+    private float mRoll = 0;
+    private float mYawSpeed = 0;
 
     // Text to Speech
     private TextToSpeech mSpeech;
@@ -85,7 +90,8 @@ public class MainActivity extends Activity implements
 
         // Sensor init
         mSensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
-        mSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
+        mSensorRotation = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
+        mSensorGyroscope = mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
         mRotationMatrix = new float[16];
         mOrientation = new float[3];
 
@@ -148,7 +154,6 @@ public class MainActivity extends Activity implements
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        Intent serverIntent;
         switch (item.getItemId()) {
             case R.id.reset_emergency:
                 ardrone.reset();
@@ -204,22 +209,26 @@ public class MainActivity extends Activity implements
         speak(on ? R.string.voice_elevation_on : R.string.voice_elevation_off);
     }
 
+    public void onFlipButtonClicked(View view){
+        ardrone.flipLeft();
+    }
+
     private void speak(int voiceCommandId){
         mSpeech.speak(getString(voiceCommandId), TextToSpeech.QUEUE_FLUSH, null);
     }
 
 
     private void startSensorTracking(){
+        // Reset initial heading
+        mInitialHeading = null;
         // Start listening to sensor data
-        mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_UI);
+        mSensorManager.registerListener(this, mSensorRotation, SensorManager.SENSOR_DELAY_UI);
+        mSensorManager.registerListener(this, mSensorGyroscope, SensorManager.SENSOR_DELAY_UI);
     }
 
     private void stopSensorTracking(){
         // Stop listening to sensor data
         mSensorManager.unregisterListener(this);
-
-        // Reset initial heading
-        mInitialHeading = null;
     }
 
     @Override
@@ -232,33 +241,42 @@ public class MainActivity extends Activity implements
     }
 
     public void onSensorChanged(SensorEvent event) {
-        if (event.sensor.getType() != Sensor.TYPE_ROTATION_VECTOR) return;
-
         String sensorData;
-        float heading, pitch, roll;
 
-        SensorManager.getRotationMatrixFromVector(mRotationMatrix, event.values);
-        SensorManager.remapCoordinateSystem(mRotationMatrix,
-                SensorManager.AXIS_X, SensorManager.AXIS_Z, mRotationMatrix);
-        SensorManager.getOrientation(mRotationMatrix, mOrientation);
+        switch (event.sensor.getType()){
+            case Sensor.TYPE_GYROSCOPE:
+                mYawSpeed = -event.values[1];
+                break;
 
-        toDegrees(mOrientation);
+            case Sensor.TYPE_ROTATION_VECTOR:
+                SensorManager.getRotationMatrixFromVector(mRotationMatrix, event.values);
+                SensorManager.remapCoordinateSystem(mRotationMatrix,
+                        SensorManager.AXIS_X, SensorManager.AXIS_Z, mRotationMatrix);
+                SensorManager.getOrientation(mRotationMatrix, mOrientation);
 
-        if (mInitialHeading == null) {mInitialHeading = mOrientation[0];}
-        heading = mOrientation[0];
-        pitch = -mOrientation[1];
-        roll = mOrientation[2];
+                toDegrees(mOrientation);
 
-        sensorData = String.format("Pitch: %+03.0f  Roll: %+03.0f  Heading: %+03.0f",
-                pitch, roll, heading);
+                if (mHeadingCount < 100) {
+                    mInitialHeading = mOrientation[0];
+                    mHeadingCount++;
+                }
+
+                mHeading = mOrientation[0]; // - mInitialHeading;
+                mPitch = -mOrientation[1];
+                mRoll = mOrientation[2];
+                break;
+        }
+
+        sensorData = String.format("Pitch: %+03.0f  Roll: %+03.0f  YawSpeed: %+01.2f",
+                mPitch, mRoll, mYawSpeed);
 
         mTextSensorData.setText(sensorData);
 
-        ardrone.move(roll, pitch, heading, mElevationToggle.isChecked());
+        ardrone.move(mRoll, mPitch, mYawSpeed, mElevationToggle.isChecked());
 
         mTextInput.setText("Flash Drive? " + ardrone.navdata.isFlashDriveReady() +
                 ". Battery: " + ardrone.navdata.batteryPercentage + "%" +
-                ". Receiving Data? " + ardrone.navdata.isReceivingData);
+                ".\nReceiving Data? " + ardrone.navdata.isReceivingData);
     }
 
     /**

@@ -122,9 +122,9 @@ public class NavdataReaderTask extends AsyncTask<Object, Void, Void> {
         navdata.flyState = demoNavdata.getShort();
         navdata.controlState = demoNavdata.getShort();
         navdata.batteryPercentage = demoNavdata.getInt();
-        navdata.theta = demoNavdata.getFloat();
-        navdata.phi = demoNavdata.getFloat();
-        navdata.psi = demoNavdata.getFloat();
+        navdata.pitch = demoNavdata.getFloat();
+        navdata.roll = demoNavdata.getFloat();
+        navdata.yaw = demoNavdata.getFloat();
         navdata.altitude = demoNavdata.getInt();
         navdata.velocityX = demoNavdata.getInt();
         navdata.velocityY = demoNavdata.getInt();

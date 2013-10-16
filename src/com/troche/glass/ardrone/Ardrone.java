@@ -32,10 +32,11 @@ public class Ardrone {
     private static final boolean D = false;
 
     // Glass Sensor constants
-    private static final int HEADING_THRESHOLD = 5;
-    private static final int PITCH_THRESHOLD = 5;
+    private static final float YAW_THRESHOLD = 0.6f;
+    private static final float YAW_MAX_VALUE = 1f;
     private static final int ROLL_THRESHOLD = 5;
     private static final int ROLL_MAX_VALUE = 90;
+    private static final int PITCH_THRESHOLD = 5;
     private static final int PITCH_MAX_VALUE = 90;
     private static final int ALTITUDE_MAX_VALUE = 70;
 
@@ -112,10 +113,6 @@ public class Ardrone {
 
         droneRoll = dronePitch = droneVerticalSpeed = droneYaw = 0f;
 
-        if (Math.abs(roll) > ROLL_THRESHOLD){
-            droneRoll = roll / ROLL_MAX_VALUE;
-        }
-
         if (Math.abs(pitch) > PITCH_THRESHOLD){
             if (isInElevationMode){
                 droneVerticalSpeed = pitch / ALTITUDE_MAX_VALUE;
@@ -125,7 +122,19 @@ public class Ardrone {
             }
         }
 
+        if (Math.abs(roll) > ROLL_THRESHOLD){
+            droneRoll = roll / ROLL_MAX_VALUE;
+        }
+
+        if (Math.abs(yaw) > YAW_THRESHOLD){
+            droneYaw = (yaw - Math.signum(yaw)*YAW_THRESHOLD);// / YAW_MAX_VALUE;
+        }
+
         atPcmd(droneRoll, dronePitch, droneVerticalSpeed, droneYaw);
+    }
+
+    public void flipLeft(){
+        animate(Animation.FLIP_LEFT);
     }
 
     private void atPcmd(float roll, float pitch, float verticalSpeed, float yaw){
@@ -138,7 +147,15 @@ public class Ardrone {
         }
     }
 
-
+    private void atPcmdMag(float roll, float pitch, float verticalSpeed, float yaw){
+        if (roll==0f && pitch==0f && verticalSpeed==0f && yaw==0f){
+            hover();
+        }
+        else{
+            String params = arrayToString(new float[]{roll, pitch, verticalSpeed, yaw, yaw, 5/360});
+            sendCommand("PCMD_MAG", ",7"+params);
+        }
+    }
 
     /**
      * takeoffFlag   -- True: Takeoff / False: Land
@@ -155,7 +172,13 @@ public class Ardrone {
         atRef(takeoffFlag, false);
     }
 
-
+    // Animation AT command example : AT*CONFIG=seq#,"control:flight_anim","3,2"
+    // The parameter is a string containing the animation number/code and its duration timeout,
+    // separated with a comma.
+    private void animate(Animation animation){
+        int animationCode = animation.ordinal();
+        setConfig("control:flight_anim", animationCode + "," + AnimationTimeouts[animationCode]);
+    }
 
     private void sendCommand(String command, String params){
         String atCommand = "AT*" + command + "=" + (seq++) + params + "\r";
@@ -171,41 +194,51 @@ public class Ardrone {
         return result.toString();
     }
 
-    /*
-    ANIMATION
-    Note : The MAYDAY_TIMEOUT array contains defaults durations for each flight animations. Note : The FLIP
-animations are only available on AR.Drone 2.0
-AT command example : AT*CONFIG=605,"control:flight_anim","3,2"
-API use example :
-char param[20];
-snprintf (param, sizeof (param), "%d,%d", ARDRONE_ANIMATION_FLIP_LEFT, MAYDAY_TIMEOUT[ARDRONE_-
-ANIMATION_FLIP_LEFT]);
-     */
+    // From ARDrone_SDK_2_0_1/ARDroneLib/Soft/Common/config.h
+    private static enum Animation {
+        PHI_M30_DEG,
+        PHI_30_DEG,
+        THETA_M30_DEG,
+        THETA_30_DEG,
+        THETA_20DEG_YAW_200DEG,
+        THETA_20DEG_YAW_M200DEG,
+        TURNAROUND,
+        TURNAROUND_GODOWN,
+        YAW_SHAKE,
+        YAW_DANCE,
+        PHI_DANCE,
+        THETA_DANCE,
+        VZ_DANCE,
+        WAVE,
+        PHI_THETA_MIXED,
+        DOUBLE_PHI_THETA_MIXED,
+        FLIP_AHEAD,
+        FLIP_BEHIND,
+        FLIP_LEFT,
+        FLIP_RIGHT
+    }
+
     // From ARDrone_SDK_2_0_1/ARDroneLib/Soft/Common/navdata_common.h
-
-
-    /* Timeout for mayday maneuvers*/
-//    static const int32_t MAYDAY_TIMEOUT[ARDRONE_NB_ANIM_MAYDAY] = {
-//        1000,  // ARDRONE_ANIM_PHI_M30_DEG
-//                1000,  // ARDRONE_ANIM_PHI_30_DEG
-//                1000,  // ARDRONE_ANIM_THETA_M30_DEG
-//                1000,  // ARDRONE_ANIM_THETA_30_DEG
-//                1000,  // ARDRONE_ANIM_THETA_20DEG_YAW_200DEG
-//                1000,  // ARDRONE_ANIM_THETA_20DEG_YAW_M200DEG
-//                5000,  // ARDRONE_ANIM_TURNAROUND
-//                5000,  // ARDRONE_ANIM_TURNAROUND_GODOWN
-//                2000,  // ARDRONE_ANIM_YAW_SHAKE
-//                5000,  // ARDRONE_ANIM_YAW_DANCE
-//                5000,  // ARDRONE_ANIM_PHI_DANCE
-//                5000,  // ARDRONE_ANIM_THETA_DANCE
-//                5000,  // ARDRONE_ANIM_VZ_DANCE
-//                5000,  // ARDRONE_ANIM_WAVE
-//                5000,  // ARDRONE_ANIM_PHI_THETA_MIXED
-//                5000,  // ARDRONE_ANIM_DOUBLE_PHI_THETA_MIXED
-//                15,  // ARDRONE_ANIM_FLIP_AHEAD
-//                15,  // ARDRONE_ANIM_FLIP_BEHIND
-//                15,  // ARDRONE_ANIM_FLIP_LEFT
-//                15,  // ARDRONE_ANIM_FLIP_RIGHT
-//    };
-
+    private static final int[] AnimationTimeouts = {
+        1000,  // PHI_M30_DEG
+        1000,  // PHI_30_DEG
+        1000,  // THETA_M30_DEG
+        1000,  // THETA_30_DEG
+        1000,  // THETA_20DEG_YAW_200DEG
+        1000,  // THETA_20DEG_YAW_M200DEG
+        5000,  // TURNAROUND
+        5000,  // TURNAROUND_GODOWN
+        2000,  // YAW_SHAKE
+        5000,  // YAW_DANCE
+        5000,  // PHI_DANCE
+        5000,  // THETA_DANCE
+        5000,  // VZ_DANCE
+        5000,  // WAVE
+        5000,  // PHI_THETA_MIXED
+        5000,  // DOUBLE_PHI_THETA_MIXED
+        15,  // FLIP_AHEAD
+        15,  // FLIP_BEHIND
+        15,  // FLIP_LEFT
+        15  // FLIP_RIGHT
+    };
 }
