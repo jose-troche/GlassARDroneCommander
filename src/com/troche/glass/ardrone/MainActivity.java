@@ -52,7 +52,7 @@ public class MainActivity extends Activity implements
     private SensorManager mSensorManager;
     private Sensor mSensorRotation;
     private Sensor mSensorGyroscope;
-    private Float mInitialHeading = null;
+    private Float mInitialHeading;
     private int mHeadingCount = 0;
     private float[] mRotationMatrix;
     private float[] mOrientation;
@@ -60,6 +60,7 @@ public class MainActivity extends Activity implements
     private float mPitch = 0;
     private float mRoll = 0;
     private float mYawSpeed = 0;
+    private float mPitchSpeed = 0;
 
     // Text to Speech
     private TextToSpeech mSpeech;
@@ -128,7 +129,7 @@ public class MainActivity extends Activity implements
 
     @Override
     public void onDestroy() {
-        ardrone.land();
+        ardrone.destroy();
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         mSpeech.shutdown();
         super.onDestroy();
@@ -160,6 +161,9 @@ public class MainActivity extends Activity implements
                 return true;
             case R.id.flat_trim:
                 ardrone.flatTrim();
+                return true;
+            case R.id.usb_record:
+                ardrone.toggleVideoRecording();
                 return true;
         }
         return false;
@@ -245,6 +249,7 @@ public class MainActivity extends Activity implements
 
         switch (event.sensor.getType()){
             case Sensor.TYPE_GYROSCOPE:
+                mPitchSpeed = event.values[0];
                 mYawSpeed = -event.values[1];
                 break;
 
@@ -272,11 +277,14 @@ public class MainActivity extends Activity implements
 
         mTextSensorData.setText(sensorData);
 
-        ardrone.move(mRoll, mPitch, mYawSpeed, mElevationToggle.isChecked());
+        ardrone.move(mRoll, mPitch, mPitchSpeed, mYawSpeed, mElevationToggle.isChecked());
 
-        mTextInput.setText("Flash Drive? " + ardrone.navdata.isFlashDriveReady() +
-                ". Battery: " + ardrone.navdata.batteryPercentage + "%" +
-                ".\nReceiving Data? " + ardrone.navdata.isReceivingData);
+        String navdataText = "";
+        if (ardrone.navdata.isReceivingData){
+            navdataText = new String("Flash Drive? " + ardrone.navdata.isFlashDriveReady() +
+                    ". Battery: " + ardrone.navdata.batteryPercentage + "%");
+        }
+        mTextInput.setText(navdataText);
     }
 
     /**

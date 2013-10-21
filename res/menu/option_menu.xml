@@ -22,4 +22,8 @@
           android:icon="@android:drawable/ic_menu_revert"
           android:title="@string/reset_emergency"
           android:showAsAction="ifRoom|withText" />
+    <item android:id="@+id/usb_record"
+          android:icon="@android:drawable/ic_menu_camera"
+          android:title="@string/usb_record"
+          android:showAsAction="ifRoom|withText" />
 </menu>

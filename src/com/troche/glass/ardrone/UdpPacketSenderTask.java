@@ -54,7 +54,7 @@ public class UdpPacketSenderTask extends AsyncTask<Object, Void, Void> {
             socket.send(packet);
             if(D) Log.e(TAG, "On port "+port+" sent "+message);
         } catch (IOException e) {
-            Log.e(TAG, "Failed sending UDP packet", e);
+            if(D) Log.e(TAG, "Failed sending UDP packet", e);
         } finally {
             if (socket != null) socket.close();
         }

@@ -32,13 +32,14 @@ public class Ardrone {
     private static final boolean D = false;
 
     // Glass Sensor constants
-    private static final float YAW_THRESHOLD = 0.6f;
-    private static final float YAW_MAX_VALUE = 1f;
-    private static final int ROLL_THRESHOLD = 5;
-    private static final int ROLL_MAX_VALUE = 90;
-    private static final int PITCH_THRESHOLD = 5;
-    private static final int PITCH_MAX_VALUE = 90;
-    private static final int ALTITUDE_MAX_VALUE = 70;
+    private static final float YAW_SPEED_THRESHOLD = 0.6f;
+    private static final float YAW_SPEED_MAX_VALUE = 1f;
+    private static final int ROLL_THRESHOLD = 7;
+    private static final int ROLL_MAX_VALUE = 60;
+    private static final float PITCH_SPEED_THRESHOLD = 0.3f;
+    private static final int PITCH_THRESHOLD = 7;
+    private static final int PITCH_MAX_VALUE = 60;
+    private static final int ELEVATION_MAX_VALUE = 50;
 
     // ARDrone UDP connections
     public static final String ARDRONE_IP = "192.168.1.1";
@@ -63,6 +64,11 @@ public class Ardrone {
         }
     }
 
+    public void destroy(){
+        land();
+        navdata.destroy();
+    }
+
     public void takeoff(){
         atRef(true);
     }
@@ -78,18 +84,19 @@ public class Ardrone {
     }
 
     public void flatTrim(){
-        //sendCommand("FTRIM", ",");
-        toggleVideoRecording();
+        sendCommand("FTRIM", ",");
     }
 
     private static boolean isRecording = false;
     public void toggleVideoRecording(){
         if (!isRecording){
-            setConfig("video:video_codec", "130");
+            setConfig("video:video_codec", "129");
+            setConfig("userbox:userbox_cmd", "1,"+"20131020_160400");
             isRecording = true;
         }
         else{
-            setConfig("video:video_codec", "0");
+            setConfig("video:video_codec", "130");
+            setConfig("userbox:userbox_cmd", "0");
             isRecording = false;
         }
     }
@@ -104,30 +111,39 @@ public class Ardrone {
 
     /**
      * Gets sensor data from Google Glass and transforms it to ARDrone flying data
-     * @param roll
-     * @param pitch
-     * @param yaw
      */
-    public void move(float roll, float pitch, float yaw, boolean isInElevationMode){
+    public void move(float roll, float pitch, float pitchSpeed, float yawSpeed, boolean isInElevationMode){
         float droneRoll, dronePitch, droneVerticalSpeed, droneYaw;
 
         droneRoll = dronePitch = droneVerticalSpeed = droneYaw = 0f;
 
+        /*
+        if (isInElevationMode){
+            if (Math.abs(pitchSpeed) > PITCH_SPEED_THRESHOLD){
+                droneVerticalSpeed = pitchSpeed - sgn(pitchSpeed)*PITCH_SPEED_THRESHOLD;
+            }
+        }
+        else{
+            if (Math.abs(pitch) > PITCH_THRESHOLD){
+                dronePitch = (pitch - sgn(pitch)*PITCH_THRESHOLD)/ PITCH_MAX_VALUE;
+            }
+        }
+        */
         if (Math.abs(pitch) > PITCH_THRESHOLD){
             if (isInElevationMode){
-                droneVerticalSpeed = pitch / ALTITUDE_MAX_VALUE;
+                droneVerticalSpeed = pitch/ELEVATION_MAX_VALUE;
             }
-            else {
-                dronePitch = pitch / PITCH_MAX_VALUE;
+            else{
+                dronePitch = (pitch-sgn(pitch)*PITCH_THRESHOLD)/PITCH_MAX_VALUE;
             }
         }
 
         if (Math.abs(roll) > ROLL_THRESHOLD){
-            droneRoll = roll / ROLL_MAX_VALUE;
+            droneRoll = (roll-sgn(roll)*ROLL_THRESHOLD)/ROLL_MAX_VALUE;
         }
 
-        if (Math.abs(yaw) > YAW_THRESHOLD){
-            droneYaw = (yaw - Math.signum(yaw)*YAW_THRESHOLD);// / YAW_MAX_VALUE;
+        if (Math.abs(yawSpeed) > YAW_SPEED_THRESHOLD){
+            droneYaw = (yawSpeed - sgn(yawSpeed)*YAW_SPEED_THRESHOLD);// / YAW_MAX_VALUE;
         }
 
         atPcmd(droneRoll, dronePitch, droneVerticalSpeed, droneYaw);
@@ -192,6 +208,10 @@ public class Ardrone {
             result.append(Float.floatToIntBits(array[i]));
         }
         return result.toString();
+    }
+
+    private float sgn(float f){
+        return Math.signum(f);
     }
 
     // From ARDrone_SDK_2_0_1/ARDroneLib/Soft/Common/config.h

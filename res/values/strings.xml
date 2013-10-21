@@ -10,6 +10,7 @@
     <!-- Options Menu -->
     <string name="reset_emergency">Reset</string>
     <string name="flat_trim">Flat Trim</string>
+    <string name="usb_record">USB Record</string>
 
     <!-- Voice commands -->
     <string name="voice_takeoff">Taking off</string>

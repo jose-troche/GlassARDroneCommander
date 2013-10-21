@@ -16,11 +16,30 @@ package com.troche.glass.ardrone;
  * limitations under the License.
  */
 
+import android.util.Log;
+
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.SocketException;
+import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+
 /**
  * Navdata associated with the ARDrone
  */
 public class Navdata {
+    // Debugging
+    private static final String TAG = "Navdata";
+    private static final boolean D = true;
+
     public boolean isReceivingData = false;
+
+    private static final Integer NAVDATA_PORT = 5554;
+    private static final short NAVDATA_MAX_SIZE = 4096;
+    private static final int NAVDATA_HEADER = 0x55667788;
 
     // Basic info
     public int state;
@@ -39,13 +58,146 @@ public class Navdata {
     public int velocityY;
     public int velocityZ;
 
+    private final NavdataReaderThread navdataReaderThread;
+
     public Navdata(){
-        //startNavdataReader();
+        navdataReaderThread = new NavdataReaderThread();
+        navdataReaderThread.start();
     }
 
-    public void startNavdataReader(){
-        isReceivingData = true;
-        new NavdataReaderTask().execute(this);
+    public synchronized void destroy(){
+        navdataReaderThread.cancel();
+    }
+
+    private class NavdataReaderThread extends Thread {
+        private static final long SLEEP = 1000 * 10;
+        private boolean keepRunning;
+        private DatagramSocket socket;
+
+        public NavdataReaderThread() {
+            keepRunning = true;
+
+            try {
+                socket = new DatagramSocket();
+                socket.setSoTimeout(1);
+            } catch (SocketException e) {
+                Log.e(TAG, "Navdata socket was unable to be initialized.", e);
+                socket = null;
+            }
+        }
+
+        public void run(){
+            try{
+                InetAddress ardroneInetAddress = InetAddress.getByName(Ardrone.ARDRONE_IP);
+
+                byte[] outBuf = {0x01, 0x00, 0x00, 0x00};
+                DatagramPacket outPacket =
+                        new DatagramPacket(outBuf, outBuf.length, ardroneInetAddress, NAVDATA_PORT);
+
+                byte[] inBuf = new byte[NAVDATA_MAX_SIZE];
+                DatagramPacket inPacket = new DatagramPacket(inBuf, inBuf.length);
+
+                while (keepRunning){
+                    try {
+                        socket.send(outPacket);
+                    } catch (IOException e) {
+                        Log.e(TAG, "Error when sending data to ARDrone NAVDATA port ", e);
+                        isReceivingData = false;
+                        sleep(SLEEP);
+                        continue;
+                    }
+
+                    try{
+                        inBuf = new byte[NAVDATA_MAX_SIZE];
+                        inPacket = new DatagramPacket(inBuf, inBuf.length);
+                        socket.receive(inPacket);
+                    }
+                    catch (IOException e){
+                        Log.e(TAG, "Error when receiving data from ARDrone NAVDATA port ", e);
+                        isReceivingData = false;
+                        continue;
+                    }
+
+                    parseRawNavdata(inPacket.getData());
+
+                    sleep(SLEEP);
+                }
+
+            } catch (InterruptedException e) {
+            } catch (UnknownHostException e) {
+                Log.e(TAG, "Error when getting ardroneInetAddress in NavdataReaderThread ", e);
+            } finally {
+                if (socket != null) socket.close();
+            }
+        }
+
+        public synchronized void cancel(){
+            keepRunning = false;
+        }
+    }
+
+    private synchronized void parseRawNavdata(byte [] inBuf){
+        try{
+            ByteBuffer rawNavdata = ByteBuffer.wrap(inBuf);
+            if (ByteOrder.LITTLE_ENDIAN != rawNavdata.order()) {
+                rawNavdata.order(ByteOrder.LITTLE_ENDIAN);
+            }
+
+            if (rawNavdata.getInt() != NAVDATA_HEADER){
+                Log.e(TAG, "Wrong navdata header. Ignoring the rest.");
+                return;
+            }
+            isReceivingData = true;
+
+            state = rawNavdata.getInt();
+            sequence = rawNavdata.getInt();
+            if(D) Log.d(TAG, "Received navdata with seq: " + sequence);
+            visionFlag = rawNavdata.getInt();
+
+            short optionId, optionSize;
+            byte[] optionData;
+
+            do { // Loop through options
+                optionId = rawNavdata.getShort();
+                optionSize = rawNavdata.getShort();
+                if(D) Log.d(TAG, "Option ID: " + optionId + ", Size: " + optionSize);
+                if (optionSize <= 4) break;
+                optionData = new byte[optionSize - 4];
+                rawNavdata.get(optionData);
+                if (optionId == 0){
+                    parseDemoNavdata(optionData);
+                }
+
+            } while (optionId != -1);
+
+
+        }
+        catch (Exception e){
+            Log.e(TAG, "Error when parsing navdata", e);
+        }
+    }
+
+    private synchronized void parseDemoNavdata(byte[] optionData){
+        try {
+            ByteBuffer demoNavdata = ByteBuffer.wrap(optionData);
+            if (ByteOrder.LITTLE_ENDIAN != demoNavdata.order()) {
+                demoNavdata.order(ByteOrder.LITTLE_ENDIAN);
+            }
+
+            flyState = demoNavdata.getShort();
+            controlState = demoNavdata.getShort();
+            batteryPercentage = demoNavdata.getInt();
+            pitch = demoNavdata.getFloat();
+            roll = demoNavdata.getFloat();
+            yaw = demoNavdata.getFloat();
+            altitude = demoNavdata.getInt();
+            velocityX = demoNavdata.getInt();
+            velocityY = demoNavdata.getInt();
+            velocityZ = demoNavdata.getInt();
+        }
+        catch (Exception e){
+            Log.e(TAG, "Error when parsing optionData of navdata", e);
+        }
     }
 
     public boolean isFlying(){
