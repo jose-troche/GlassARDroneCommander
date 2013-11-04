@@ -168,7 +168,7 @@ public class Navdata {
                     parseDemoNavdata(optionData);
                 }
 
-            } while (optionId != -1);
+            } while (optionId != 0);
 
 
         }

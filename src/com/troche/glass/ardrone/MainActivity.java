@@ -282,7 +282,7 @@ public class MainActivity extends Activity implements
         String navdataText = "";
         if (ardrone.navdata.isReceivingData){
             navdataText = new String("Flash Drive? " + ardrone.navdata.isFlashDriveReady() +
-                    ". Battery: " + ardrone.navdata.batteryPercentage + "%");
+                    ". Battery: " + ardrone.navdata.batteryPercentage + "%" + ". Seq: " + ardrone.navdata.sequence);
         }
         mTextInput.setText(navdataText);
     }
